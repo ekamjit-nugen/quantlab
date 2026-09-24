@@ -42,6 +42,10 @@ adds rows here. If you read one file in this repo twice, make it this one.
 | `Symbol.iterator` | `__iter__` and friends | "Dunder" methods |
 | `interface` (structural) | `typing.Protocol` | PR-022. This is the one that will feel like home. |
 | `class` (nominal) | `abc.ABC` | PR-022 |
+| `private` | *(does not exist)* | `_single` is convention; `__double` is name mangling, not access control |
+| `#private` (true privacy) | *(no equivalent)* | Everything is reachable in Python |
+| `void` | `-> None` | Every function returns something; no `return` means it returns `None` |
+| types erased at compile time | annotations **kept** at runtime | The key divergence from TS. `f.__annotations__` is real data, which is how FastAPI, Pydantic and PR-011's tool schemas work. |
 
 ## Habits to unlearn
 
@@ -55,3 +59,20 @@ adds rows here. If you read one file in this repo twice, make it this one.
 - **Running a file by path** — `python src/quantlab/__main__.py` bypasses the
   package machinery and breaks relative imports. Use `python -m quantlab`.
 - **`float` for money** — see PR-008. This one will cost you real numbers.
+
+## Underscore patterns
+
+Four patterns that look alike. Only two are real language features.
+
+| Pattern | Meaning | Enforced? |
+|---|---|---|
+| `__both__` | dunder — a name Python or the ecosystem already defines | Sometimes |
+| `_single` | "internal, don't touch" | No. Convention only. |
+| `__leading` *inside a class* | name mangling: rewritten to `_ClassName__leading` | **Yes** |
+| `trailing_` | avoids clashing with a keyword (`class_`, `id_`) | No |
+
+**The rule:** you almost never *invent* a dunder, you *implement* ones that
+already exist. PEP 8 reserves `__x__` names for the language itself.
+
+See [PR-001 §10.1-10.3](prs/PR-001-scaffold.md) for the full explanation and the
+demonstration of name mangling eating a module name.
