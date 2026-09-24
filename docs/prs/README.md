@@ -31,12 +31,12 @@ document is the real deliverable — the code is almost a side effect.
 |---|---|---|---|
 | [001](PR-001-scaffold.md) | Project scaffold, `src` layout, `python -m` | packages, `__init__.py`, `__main__.py`, docstrings, f-strings, the `__name__` guard, virtual environments, dunders + name mangling, runtime-preserved annotations | `uv`, `uv_build` |
 | [002](PR-002-ruff.md) | `ruff` + single-source version | linting vs formatting, rule-code families, mutable default arguments, shadowing builtins, `is None`, `list[int]` vs `List[int]`, `importlib.metadata` | `ruff` |
+| [003](PR-003-mypy.md) | `mypy --strict` | why mypy's default is "mostly off", `Any` contagion, union types, narrowing, `reveal_type`, list invariance vs TS covariance, `Sequence` vs `list`, no block scope | `mypy` |
 
 ## Planned — Phase 0, Foundations
 
 | PR | Title |
 |---|---|
-| 003 | `mypy --strict` — the type checker |
 | 004 | `pytest` — first test, layout, `conftest.py` |
 | 005 | `pre-commit` hooks |
 | 006 | GitHub Actions CI |
