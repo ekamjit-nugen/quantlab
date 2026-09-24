@@ -16,9 +16,11 @@ adds rows here. If you read one file in this repo twice, make it this one.
 | `node_modules/` | `.venv/` | `.venv` also contains the interpreter itself |
 | `engines.node` | `requires-python` | Python actually enforces it |
 | `dependencies` | `[project] dependencies` | |
-| `devDependencies` | `[dependency-groups] dev` | Added in PR-002 |
+| `devDependencies` | `[dependency-groups] dev` | PEP 735. Sits *outside* `[project]` — dev deps are not package metadata. PR-002 |
 | `bin` | `[project.scripts]` | Added in PR-020 |
-| `eslint` + `prettier` | `ruff` | One tool for both. PR-002 |
+| `eslint` | `ruff check` | PR-002 |
+| `prettier` | `ruff format` | Same binary as the linter. PR-002 |
+| `.eslintrc` + `.prettierrc` | `[tool.ruff]` in `pyproject.toml` | Every tool namespaces under `[tool.*]`. No config litter. |
 | `tsc` | `mypy` | PR-003 |
 | `jest` / `vitest` | `pytest` | PR-004 |
 | `tsup` / `esbuild` (library build) | `uv_build` / `hatchling` | Declared, never invoked by you |
@@ -44,6 +46,9 @@ adds rows here. If you read one file in this repo twice, make it this one.
 | `class` (nominal) | `abc.ABC` | PR-022 |
 | `private` | *(does not exist)* | `_single` is convention; `__double` is name mangling, not access control |
 | `#private` (true privacy) | *(no equivalent)* | Everything is reachable in Python |
+| `f(x, bucket = [])` — fresh array per call | `def f(x, bucket=[])` — **shared** across calls | Default evaluated once at `def` time. Use `=None`. PR-002 |
+| `Array`, `Object` are protected-ish | `list`, `dict`, `id`, `type` are plain names | You can shadow them by accident. PR-002 |
+| `===` vs `==` (coercion) | `is` vs `==` (identity vs value) | Not the same distinction. Python's `==` never coerces. Always `is None`. |
 | `void` | `-> None` | Every function returns something; no `return` means it returns `None` |
 | types erased at compile time | annotations **kept** at runtime | The key divergence from TS. `f.__annotations__` is real data, which is how FastAPI, Pydantic and PR-011's tool schemas work. |
 
