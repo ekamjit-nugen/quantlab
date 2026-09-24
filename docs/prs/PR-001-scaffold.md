@@ -447,8 +447,8 @@ constantly from PR-013 onward.
 ```python
 class Account:
     def __init__(self):
-        self._soft = 1      # convention only
-        self.__hard = 2     # name-mangled
+        self._soft = 1  # convention only
+        self.__hard = 2  # name-mangled
 ```
 
 What is actually stored on the instance:

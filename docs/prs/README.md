@@ -30,12 +30,12 @@ document is the real deliverable — the code is almost a side effect.
 | PR | Title | Concepts | Packages |
 |---|---|---|---|
 | [001](PR-001-scaffold.md) | Project scaffold, `src` layout, `python -m` | packages, `__init__.py`, `__main__.py`, docstrings, f-strings, the `__name__` guard, virtual environments, dunders + name mangling, runtime-preserved annotations | `uv`, `uv_build` |
+| [002](PR-002-ruff.md) | `ruff` + single-source version | linting vs formatting, rule-code families, mutable default arguments, shadowing builtins, `is None`, `list[int]` vs `List[int]`, `importlib.metadata` | `ruff` |
 
 ## Planned — Phase 0, Foundations
 
 | PR | Title |
 |---|---|
-| 002 | `ruff` — linting and formatting, plus the single-source version fix (pulled forward from 020) |
 | 003 | `mypy --strict` — the type checker |
 | 004 | `pytest` — first test, layout, `conftest.py` |
 | 005 | `pre-commit` hooks |
