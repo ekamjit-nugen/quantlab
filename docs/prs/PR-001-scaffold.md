@@ -400,7 +400,293 @@ holding you to it.
 - [x] `docs/js-to-python.md` seeded from §6
 - [x] `docs/prs/README.md` has a row for PR-001
 
-## 10. What PR-002 will add
+## 10. FAQ
 
-`ruff` — linting and formatting. It will reformat some of the code written here,
-and the diff it produces is itself a lesson in what idiomatic Python looks like.
+> Questions asked after the first read of this document. Every output shown
+> below was produced by running the code in this repository, not predicted.
+
+### 10.1 What does `__` actually signify?
+
+There are **four different underscore patterns** that look alike and get lumped
+together. Only two are real language features; the other two are pure
+convention. Confusing them is the root of most of the confusion.
+
+| Pattern | Name | Enforced by Python? |
+|---|---|---|
+| `__name__`, `__init__`, `__version__` | **dunder** — underscores on *both* sides | Sometimes (see below) |
+| `_internal` | single leading — "don't touch this" | **No.** Social convention only. |
+| `__secret` (leading only, inside a class) | **name mangling** | **Yes.** A real transformation. |
+| `class_`, `id_` | trailing — avoids a keyword clash | No. Convention. |
+
+#### Dunders split into two kinds
+
+**Dunder *methods*** are Python's operator-overloading system. The language
+calls them on your behalf:
+
+| You write | Python actually calls |
+|---|---|
+| `len(x)` | `x.__len__()` |
+| `a + b` | `a.__add__(b)` |
+| `a == b` | `a.__eq__(b)` |
+| `for i in x` | `x.__iter__()` |
+| `x[0]` | `x.__getitem__(0)` |
+| `with x:` | `x.__enter__()` / `x.__exit__()` |
+| `print(x)` | `x.__str__()` |
+
+This is the direct analogue of JavaScript's `Symbol.iterator`,
+`Symbol.toPrimitive` and `toString()` — except Python has roughly a hundred of
+them and they cover far more of the language. You will implement these
+constantly from PR-013 onward.
+
+**Dunder *variables*** are metadata. Some are set by the runtime (`__name__`,
+`__file__`, `__doc__`), some are ecosystem convention that tools read
+(`__version__`, `__all__`).
+
+#### Name mangling — the one that rewrites your code
+
+```python
+class Account:
+    def __init__(self):
+        self._soft = 1      # convention only
+        self.__hard = 2     # name-mangled
+```
+
+What is actually stored on the instance:
+
+```
+attributes actually stored: ['_soft', '_Account__hard']
+a._soft            -> 1
+a.__hard           -> 'Account' object has no attribute '__hard'
+a._Account__hard   -> 2
+```
+
+Python textually rewrote `__hard` into `_Account__hard`. This happens **only
+inside a class body**.
+
+Note what it is *not*: it is **not** `private`. The attribute is still
+reachable — you just type the mangled name. Its actual purpose is narrow:
+stopping a subclass from accidentally clobbering a parent's attribute. Using it
+as access control is a common mistake. **Python has no `private`.** The
+`_single` convention is the entire story, and it works because people respect it.
+
+### 10.2 How do I know when to use `__`?
+
+**The rule is simpler than it looks: you almost never invent a dunder. You
+implement ones that already exist.**
+
+PEP 8 says this outright — never invent such names, only use them as documented.
+Names of the form `__x__` are reserved by the language spec for future use, so
+inventing `__myflag__` today risks colliding with a real Python feature
+tomorrow.
+
+| Situation | Use `__`? |
+|---|---|
+| Implementing a protocol Python defines (`__eq__`, `__iter__`, `__len__`) | **Yes** — from the documented list |
+| Setting conventional metadata (`__version__`, `__all__`) | **Yes** — from the known list |
+| Naming your own variable, function or constant | **No.** Ever. |
+| "I want this to be private" | **No** — use one leading underscore: `_thing` |
+| A subclass might clash with this parent attribute | Leading `__` (mangling), and only then |
+
+For the next several PRs the answer is simply **don't**. The dunders in
+`quantlab` today are `__init__.py`, `__main__.py`, `__name__` and `__version__`
+— all four are names Python or the ecosystem already defined. You invented none
+of them.
+
+### 10.3 What if I put `__` on all my filenames?
+
+The answer is not "it breaks". It is "it works until it suddenly does not, in a
+way you would never debug".
+
+**Three filenames are reserved** and carry specific meaning:
+
+- `__init__.py` — makes the directory a package
+- `__main__.py` — what `python -m package` runs
+- `__pycache__/` — bytecode cache directory (generated, never yours)
+
+**Any other `__name.py` is not reserved**, and importing it works fine:
+
+```
+import __foo works: I am __foo
+```
+
+Now put that same import inside a class body:
+
+```python
+class Thing:
+    import __foo
+```
+```
+ModuleNotFoundError: No module named '_Thing__foo'
+```
+
+**Name mangling ate the module name.** It rewrote `__foo` to `_Thing__foo`
+because mangling applies to *any* identifier with two leading underscores
+appearing textually inside a class definition — it has no idea it is looking at
+a module name.
+
+There is a second, quieter problem: `from package import *` silently skips every
+name beginning with `_`, so dunder-named modules become invisible to wildcard
+imports.
+
+**So: no.** Reserve `__` for the three filenames Python defines. Normal modules
+get normal names — `config.py`, `registry.py`, `backtest.py`.
+
+### 10.4 The version is in two files. Do I have to update both?
+
+**Yes — today. That is a bug waiting to happen, and §7 planted it deliberately.**
+
+```
+pyproject.toml:3              version = "0.1.0"       <- what gets built and installed
+src/quantlab/__init__.py:3    __version__ = "0.1.0"   <- what the code reports
+```
+
+Bump one, forget the other, and `python -m quantlab` confidently prints a
+version that is not what is installed. That bug surfaces six months later in a
+support conversation.
+
+**The fix is one source of truth.** `pyproject.toml` wins, and the code reads
+it:
+
+```python
+"""quantlab - a market-research and backtesting toolkit."""
+
+from importlib.metadata import version
+
+__version__ = version("quantlab")
+```
+
+Verified against this repository:
+
+```
+read from pyproject.toml metadata: 0.1.0
+```
+
+`importlib.metadata` is **standard library** — no new dependency. It reads the
+metadata of the *installed* package, which the build generates from
+`pyproject.toml`. One place to edit, permanently.
+
+The trade-off: it only works when the package is installed. Yours is, in
+editable mode, via `uv sync`. Code run from a raw source copy with no install
+would raise `PackageNotFoundError`. For an application that is correct
+behaviour; a widely-distributed library would wrap it in a `try`.
+
+The opposite approach is `dynamic = ["version"]` in the toml with the build
+backend reading `__init__.py`, making code the source of truth. Both are
+legitimate; reading from metadata is the more common modern choice.
+
+**This lands in PR-002**, pulled forward from PR-020 — leaving a known bug in
+`main` for eighteen PRs to preserve a teaching beat would be the wrong call once
+the lesson has landed.
+
+### 10.5 Explain `__main__.py` again — the `if`, the `->`, and `None`
+
+```python
+def main() -> None:
+    """Print the installed version and exit."""
+    print(f"quantlab {__version__}")
+
+
+if __name__ == "__main__":
+    main()
+```
+
+#### The `->` syntax
+
+`-> None` is a **return type annotation**. `def main() -> None:` reads "`main`
+takes no arguments and returns `None`."
+
+The part worth internalising: **Python does not enforce it at runtime.**
+
+```python
+def lies() -> int:
+    return "not an int"
+```
+```
+'not an int'
+```
+
+No error. It ran, and returned a string from a function annotated `int`.
+
+Annotations are for *humans and type checkers*. This is exactly like
+TypeScript — `tsc` complains, the runtime does not care. PR-003 adds `mypy`,
+which is the thing that complains.
+
+But here is where Python **diverges** from TypeScript, and it matters later:
+
+```
+annotations survive as data: {'return': <class 'int'>}
+```
+
+TypeScript types are **erased** at compile time — gone, unreachable. Python
+annotations are **preserved as runtime data** on the function object. That is
+not trivia. It is the mechanism behind FastAPI generating request validation
+from your signatures (Phase 8), Pydantic building models from classes, and — in
+Phase 11 — your agent generating LLM tool schemas straight from your own
+function signatures. **The type hints you write become the thing the machine
+reads.**
+
+#### Why `None` specifically
+
+`None` is Python's `null`. There is only one absent-value type — no separate
+`undefined`, which quietly removes a whole category of JavaScript bug.
+
+But `-> None` does not mean "returns nothing". **Every Python function returns
+something.** A function with no `return` statement implicitly returns `None`:
+
+```
+quantlab 0.1.0
+main() returned: None
+```
+
+`main()` printed, then handed back `None`. So `-> None` is a literal statement
+of fact: this returns the value `None`. Compare `-> str`, which means "hands you
+back a string you can use".
+
+There is no `void` in Python. `None` covers it.
+
+#### Why the `if`
+
+Every module has a `__name__` variable, and **its value depends on how the
+module was reached**. Both of these are the same file:
+
+```
+when IMPORTED,     __name__ == 'quantlab.__main__'
+when RUN directly, __name__ == '__main__'
+```
+
+Python sets `__name__` to the module's import path when it is imported, and to
+the literal string `"__main__"` when it is the module being executed. So:
+
+```python
+if __name__ == "__main__":
+```
+
+means exactly: **"only do this when I am being run, not when I am being
+imported."** The JavaScript equivalent is `if (require.main === module)` — same
+idea, uglier spelling.
+
+**Why it actually matters.** Without the guard, `main()` runs whenever anything
+imports the module:
+
+- **Tests break.** `from quantlab.__main__ import main` to test `main` would
+  execute it during collection.
+- **Tooling breaks.** mypy, documentation generators and IDEs import your
+  modules to inspect them. Every import would print.
+- **`multiprocessing` breaks outright** on macOS and Windows. Child processes
+  are spawned by *re-importing* the parent module. Without the guard each child
+  re-runs your top-level code, which spawns more children, which re-import, and
+  so on. Phase 6 demonstrates this fork bomb for real — which is the point at
+  which the guard stops feeling like boilerplate.
+
+Exercise 2 above makes you confirm all of this yourself. That contrast between
+the two runs is the whole lesson.
+
+## 11. What PR-002 will add
+
+Two things:
+
+1. **`ruff`** — linting and formatting. It will reformat some of the code
+   written here, and reading that diff is itself a lesson in what idiomatic
+   Python looks like.
+2. **The version fix from §10.4** — `importlib.metadata`, so the version lives
+   in exactly one place.
