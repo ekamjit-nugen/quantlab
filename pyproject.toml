@@ -10,3 +10,35 @@ dependencies = []
 [build-system]
 requires = ["uv_build>=0.12.18,<0.13.0"]
 build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "ruff>=0.16.8",
+]
+
+[tool.ruff]
+line-length = 88
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors      - PEP 8 layout
+    "W",    # pycodestyle warnings    - trailing whitespace, etc.
+    "F",    # pyflakes                - real bugs: unused imports, undefined names
+    "I",    # isort                   - import ordering
+    "N",    # pep8-naming             - naming conventions
+    "D",    # pydocstyle              - docstring presence and style
+    "UP",   # pyupgrade               - rewrite to modern Python syntax
+    "B",    # flake8-bugbear          - likely bugs and design problems
+    "A",    # flake8-builtins         - shadowing builtins (list, id, type...)
+    "C4",   # flake8-comprehensions   - simpler comprehensions
+    "SIM",  # flake8-simplify         - redundant constructs
+    "PTH",  # flake8-use-pathlib      - prefer pathlib over os.path
+    "RUF",  # ruff's own rules
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.format]
+docstring-code-format = true
