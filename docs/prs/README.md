@@ -29,13 +29,13 @@ document is the real deliverable — the code is almost a side effect.
 
 | PR | Title | Concepts | Packages |
 |---|---|---|---|
-| [001](PR-001-scaffold.md) | Project scaffold, `src` layout, `python -m` | packages, `__init__.py`, `__main__.py`, docstrings, f-strings, the `__name__` guard, virtual environments | `uv`, `uv_build` |
+| [001](PR-001-scaffold.md) | Project scaffold, `src` layout, `python -m` | packages, `__init__.py`, `__main__.py`, docstrings, f-strings, the `__name__` guard, virtual environments, dunders + name mangling, runtime-preserved annotations | `uv`, `uv_build` |
 
 ## Planned — Phase 0, Foundations
 
 | PR | Title |
 |---|---|
-| 002 | `ruff` — linting and formatting |
+| 002 | `ruff` — linting and formatting, plus the single-source version fix (pulled forward from 020) |
 | 003 | `mypy --strict` — the type checker |
 | 004 | `pytest` — first test, layout, `conftest.py` |
 | 005 | `pre-commit` hooks |
